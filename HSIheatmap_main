@@ -1,0 +1,47 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import yfinance as yf
+import datetime
+
+
+start_date= "1990-01-01"
+end_date="2024-12-31"
+hsi_data = yf.download("^HSI", start=start_date, end=end_date)
+hsi_data.to_csv('HSI_historical_data.csv')
+hsi_df= pd.read_csv("HSI_historical_data.csv")
+
+#Formatting the data scraping from yahoo finance
+hsi_df["Open"] = pd.to_numeric(hsi_df["Open"], errors='coerce')
+hsi_df["Close"] = pd.to_numeric(hsi_df["Close"], errors='coerce')
+hsi_df.columns = ["Date","Close","High","Low","Open","Volume"]
+hsi_df.drop(index=[0, 1], inplace=True)
+
+#Chaning to datetime format
+hsi_df["Date"]= pd.to_datetime(hsi_df["Date"])
+
+#Getting Year, Month and Day
+hsi_df["Year"]=hsi_df["Date"].dt.year
+hsi_df["Month"]=hsi_df["Date"].dt.month
+hsi_df["Day"]=hsi_df["Date"].dt.day
+
+def daily_performance(row):
+  return (row["Close"]-row["Open"])/row["Open"] *100
+
+hsi_df["Daily Performance"]=hsi_df.apply(daily_performance,axis=1)
+
+#Formatting the heatmap (Data, title and labels)
+heatmap_data=hsi_df.pivot_table(values="Daily Performance",index = "Day", columns="Month",aggfunc="mean")
+
+plt.figure(figsize=(12,8))
+sns.heatmap(heatmap_data, cmap="coolwarm", annot=True, fmt=".1f")
+
+plt.title("HSI Average Performance Per Day (Jan 1990 - Dec 2024)")
+plt.xlabel("Month")
+plt.ylabel("Day of Month")
+plt.xticks(ticks=np.arange(0.5, 12.5), labels=["Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
+plt.savefig('HSI Average Performance Per Day (1990-2024)')
+plt.close()
